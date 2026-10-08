@@ -14,8 +14,9 @@
   r.style.colorScheme=dark?'dark':'light';
   document.getElementById('themeColor').content=m==='oled'?'#000000':(dark?'#0a1428':'#f4f6fb');
   if(s.fs) r.style.setProperty('--fs',s.fs);
-  if(s.motion===false) r.dataset.motion='off';
+  if(s.motionUser&&s.motion===false) r.dataset.motion='off';
 }catch(e){}})();
+window.__anim=function(){try{var s=JSON.parse(localStorage.getItem('cobit.s')||'{}');return !(s.motionUser&&s.motion===false);}catch(e){return true;}};
 </script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -711,6 +712,27 @@ body.kb .tabbar,body.kb .to-top{display:none}
 .miss{padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:8px}
 .miss b{color:var(--text)}
 .continue.alt{margin-left:10px;border-color:var(--border-2);background:var(--surface-2);color:#fff}
+
+/* ===== Arreglos modo claro y barra superior (escritorio) ===== */
+[data-theme=light] .hero{background:linear-gradient(135deg,#0a1d3d 0%,#122d55 55%,#0a1428 100%)}
+[data-theme=light] .hero-blob{opacity:.4}
+[data-theme=light] .metric,[data-theme=light] .eje-card{backdrop-filter:none}
+.nav-search{width:40px;padding:0;justify-content:center}
+.nav-search .lbl,.nav-search kbd{display:none}
+@media(min-width:769px){
+  .nav-inner{flex-wrap:nowrap;gap:14px}
+  .nav-brand{flex:none}
+  .nav-links{flex:1 1 0;min-width:0;margin-left:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;justify-content:flex-start;-webkit-overflow-scrolling:touch}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links a{flex:none}
+  .nav-tools{flex:none;margin-left:0}
+}
+
+.continue.alt svg{fill:none;stroke:currentColor;stroke-width:1.9;width:16px;height:16px}
+.continue.alt{margin-left:0;margin-right:10px}
+.continue:not([hidden])+.continue.alt{margin-left:0}
+.continue{margin-right:10px}
+.chart-svg{overflow:visible}
 </style>
 </head>
 <body>
@@ -1605,7 +1627,7 @@ function navigate(view, event, param){
     if(view === 'trazabilidad') renderTrazabilidad();
     setTimeout(initReveal, 50);
   };
-  if(document.startViewTransition && !matchMedia('(prefers-reduced-motion:reduce)').matches){
+  if(document.startViewTransition && window.__anim()){
     document.startViewTransition(run);
   } else run();
 }
@@ -2415,7 +2437,7 @@ function initTilt(){
 /* Hero particles */
 function initHeroParticles(){
   const hb = document.querySelector('.hero-bg'), hero = document.querySelector('.hero');
-  if(!hb || !hero || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  if(!hb || !hero || !window.__anim()) return;
   const cv = document.createElement('canvas');
   hb.appendChild(cv);
   const g = cv.getContext('2d');
@@ -2656,7 +2678,8 @@ window.__IC=IC;
 const KEY='cobit.s',FKEY='cobit.fav',VKEY='cobit.seen',LKEY='cobit.last';
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const S=Object.assign({theme:'dark',fs:1,motion:!matchMedia('(prefers-reduced-motion:reduce)').matches,lastDark:'dark'},load(KEY,{}));
+const S=Object.assign({theme:'dark',fs:1,motion:true,lastDark:'dark'},load(KEY,{}));
+if(!S.motionUser) S.motion=true;
 let FAV=load(FKEY,[]);
 const SEEN=new Set(load(VKEY,[]));
 
@@ -2932,7 +2955,7 @@ function onSheetClick(e){
   else if(d.act==='clearfav'){FAV=[]; save(FKEY,FAV); syncFavs(); applyAllFilters(); renderSheet('settings'); toast('Favoritos borrados');}
   else if(d.themeOpt){setThemeMode(d.themeOpt,t); $$('[data-theme-opt]',sheetEl).forEach(b=>b.classList.toggle('on',b===t));}
   else if(d.fs){S.fs=+d.fs; save(KEY,S); applyFs(); $$('[data-fs]',sheetEl).forEach(b=>b.classList.toggle('on',b===t));}
-  else if(t.hasAttribute('data-motion')){S.motion=!S.motion; save(KEY,S); applyMotion(); t.classList.toggle('on',S.motion); t.setAttribute('aria-checked',S.motion);}
+  else if(t.hasAttribute('data-motion')){S.motion=!S.motion; S.motionUser=true; save(KEY,S); applyMotion(); t.classList.toggle('on',S.motion); t.setAttribute('aria-checked',S.motion);}
 }
 addEventListener('keydown',e=>{if(e.key==='Escape'&&openKind) closeSheet();});
 
@@ -2946,6 +2969,7 @@ window.navigate=function(view,ev,param){
     const h=location.hash;
     if(view!=='home'&&h&&h!=='#/'&&h!=='#'){const t=$('.view.active h1'); if(t) save(LKEY,{h:h,t:t.textContent.trim()});}
     if(view==='home') updateContinue();
+    const nl=$('#navLinks'),ac=nl&&$('a.active',nl); if(ac) nl.scrollTo({left:ac.offsetLeft-nl.clientWidth/2+ac.offsetWidth/2,behavior:'smooth'});
   },260);
   return r;
 };
